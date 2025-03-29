@@ -4,9 +4,10 @@ import { basePrompt as reactPrompt } from "./default/react";
 import { basePrompt as nodePrompt } from "./default/node";
 import { BASE_PROMPT, getSystemPrompt } from "./prompts";
 import cors from "cors";
+import { env } from "process";
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const apiKey = "AIzaSyDCPGQwI9PANf9ypccdhclapzAQLq0kQj8";
+const apiKey = env.GOOGLE_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey);
 const app = express();
 app.use(express.json());
