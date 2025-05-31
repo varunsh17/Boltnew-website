@@ -6,7 +6,7 @@ import { BASE_PROMPT, getSystemPrompt } from "./prompts";
 import cors from "cors";
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const apiKey = "AIzaSyDpbs4GZxi39AC4YVtnBvVZCoaJ0agYPeU";
+const apiKey = process.env.GOOGLE_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey);
 const app = express();
 app.use(express.json());

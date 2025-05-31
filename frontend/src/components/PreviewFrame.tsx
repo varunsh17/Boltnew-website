@@ -1,51 +1,94 @@
 import { WebContainer } from "@webcontainer/api";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { FileItem } from "../types";
+import { Loader } from "./Loader";
 
 interface PreviewFrameProps {
-  files: any[];
-  webContainer: WebContainer | null; // Accept `null`
+  files: FileItem[];
+  webContainer: WebContainer | null;
 }
 
 export function PreviewFrame({ files, webContainer }: PreviewFrameProps) {
   const [url, setUrl] = useState("");
-  console.log("Webcontainer is = ", webContainer);
+  const [logs, setLogs] = useState<string[]>([]);
+  const devStarted = useRef(false);
+
   useEffect(() => {
     async function main() {
-      if (!webContainer) {
-        console.warn("WebContainer is not available yet.");
-        return;
+      if (!webContainer || devStarted.current) return;
+      devStarted.current = true;
+
+      function appendLog(data: string) {
+        setLogs((prev) => [...prev, data]);
       }
 
-      console.log("Installing dependencies...");
-      const installProcess = await webContainer.spawn("npm", ["install"]);
+      const exists = await webContainer.fs
+        .readdir("node_modules")
+        .catch(() => null);
+      if (!exists) {
+        appendLog("Installing dependencies...");
+        const installProcess = await webContainer.spawn("npm", ["install"]);
+        installProcess.output.pipeTo(
+          new WritableStream({
+            write(data) {
+              appendLog(data);
+            },
+          })
+        );
+        await installProcess.exit;
+      }
 
-      installProcess.output.pipeTo(
+      appendLog("Starting dev server...");
+      const devProcess = await webContainer.spawn("npm", ["run", "dev"]);
+      devProcess.output.pipeTo(
         new WritableStream({
           write(data) {
-            console.log(data);
+            appendLog(data);
           },
         })
       );
 
-      console.log("Installing dependencies finished...");
-      console.log("Starting webcontainer...");
-      await webContainer.spawn("npm", ["run", "dev"]);
-
       webContainer.on("server-ready", (port, url) => {
-        console.log("Server ready at:", url);
-        console.log("Port ready at:", port);
         setUrl(url);
+        appendLog(`Server ready at ${url}`);
       });
     }
 
     main();
-  }, []);
+  }, [webContainer]);
 
   return (
-    <div className="h-full flex items-center justify-center text-gray-400">
-      {!webContainer && <p>Initializing WebContainer...</p>}
-      {!url && webContainer && <p>Loading preview...</p>}
-      {url && <iframe width="100%" height="100%" src={url} />}
+    <div className="h-full flex flex-col items-stretch justify-stretch text-gray-400">
+      <div className="flex-1 flex items-center justify-center">
+        {!webContainer && <Loader />}
+        {!url && webContainer && <Loader />}
+        {url && <iframe width="100%" height="100%" src={url} />}
+      </div>
+      <div className="bg-black text-green-400 text-xs p-2 h-32 overflow-auto rounded mt-2 font-mono">
+        {logs.map((line, i) => (
+          <div key={i}>{line}</div>
+        ))}
+      </div>
+      {url && (
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs text-gray-300">{url}</span>
+          <button
+            className="bg-gray-700 text-white px-2 py-1 rounded"
+            onClick={() => navigator.clipboard.writeText(url)}
+          >
+            Copy URL
+          </button>
+        </div>
+      )}
+      <button
+        className="bg-blue-600 text-white px-3 py-1 rounded mb-2"
+        onClick={() => {
+          devStarted.current = false;
+          setUrl("");
+        }}
+      >
+        Restart Preview
+      </button>
     </div>
   );
 }
