@@ -4,17 +4,16 @@ import { basePrompt as reactPrompt } from "./default/react";
 import { basePrompt as nodePrompt } from "./default/node";
 import { BASE_PROMPT, getSystemPrompt } from "./prompts";
 import cors from "cors";
-import { env } from "process";
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const apiKey = env.GOOGLE_API_KEY;
+const apiKey = "AIzaSyDpbs4GZxi39AC4YVtnBvVZCoaJ0agYPeU";
 const genAI = new GoogleGenerativeAI(apiKey);
 const app = express();
 app.use(express.json());
 app.use(cors());
 
 const model = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash-exp",
+  model: "gemini-2.0-flash",
 });
 const generationConfig = {
   temperature: 0.25,
@@ -95,8 +94,21 @@ app.post("/chat", async (req, res) => {
   });
 
   try {
-    // Start chat session
     const allmessages = req.body.messages;
+    // Validate input
+    if (
+      !Array.isArray(allmessages) ||
+      allmessages.length < 3 ||
+      !allmessages[0]?.content ||
+      !allmessages[1]?.content ||
+      !allmessages[2]?.content
+    ) {
+      res
+        .status(400)
+        .json({ message: "Invalid 'messages' provided in request body" });
+      return;
+    }
+
     const reply1 = allmessages[0];
     const reply2 = allmessages[1];
     const reply3 = allmessages[2];
@@ -107,7 +119,7 @@ app.post("/chat", async (req, res) => {
           role: "user",
           parts: [
             {
-              text: reply1.parts[0].text,
+              text: reply1.content,
             },
           ],
         },
@@ -115,14 +127,14 @@ app.post("/chat", async (req, res) => {
           role: "user",
           parts: [
             {
-              text: reply2.parts[0].text,
+              text: reply2.content,
             },
           ],
         },
       ],
     });
     // Send message to the chat session
-    const answer = await chatSession.sendMessage(reply3.parts[0].text);
+    const answer = await chatSession.sendMessage(reply3.content);
 
     // Log the raw response
     console.log("Raw response received:", answer);

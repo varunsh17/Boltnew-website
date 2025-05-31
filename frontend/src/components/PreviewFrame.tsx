@@ -1,5 +1,5 @@
-import { WebContainer } from '@webcontainer/api';
-import React, { useEffect, useState } from 'react';
+import { WebContainer } from "@webcontainer/api";
+import React, { useEffect, useState } from "react";
 
 interface PreviewFrameProps {
   files: any[];
@@ -8,36 +8,37 @@ interface PreviewFrameProps {
 
 export function PreviewFrame({ files, webContainer }: PreviewFrameProps) {
   const [url, setUrl] = useState("");
-  console.log("Webcontainer is = ",webContainer);
-  async function main() {
-    if (!webContainer) {
-      console.warn("WebContainer is not available yet.");
-      return;
+  console.log("Webcontainer is = ", webContainer);
+  useEffect(() => {
+    async function main() {
+      if (!webContainer) {
+        console.warn("WebContainer is not available yet.");
+        return;
+      }
+
+      console.log("Installing dependencies...");
+      const installProcess = await webContainer.spawn("npm", ["install"]);
+
+      installProcess.output.pipeTo(
+        new WritableStream({
+          write(data) {
+            console.log(data);
+          },
+        })
+      );
+
+      console.log("Installing dependencies finished...");
+      console.log("Starting webcontainer...");
+      await webContainer.spawn("npm", ["run", "dev"]);
+
+      webContainer.on("server-ready", (port, url) => {
+        console.log("Server ready at:", url);
+        console.log("Port ready at:", port);
+        setUrl(url);
+      });
     }
 
-    console.log("Installing dependencies...");
-    const installProcess = await webContainer.spawn('npm', ['install']);
-
-    installProcess.output.pipeTo(new WritableStream({
-      write(data) {
-        console.log(data);
-      }
-    }));
-
-    console.log("Installing dependencies finished...");
-    console.log("Starting webcontainer...");
-    await webContainer.spawn('npm', ['run', 'dev']);
-
-    webContainer.on('server-ready', (port, url) => {
-      console.log("Server ready at:", url);
-      console.log("Port ready at:", port);
-      setUrl(url);
-
-    });
-  }
-
-  useEffect(() => {
-      main();
+    main();
   }, []);
 
   return (

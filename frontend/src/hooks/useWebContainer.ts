@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { WebContainer } from "@webcontainer/api";
 
 export function useWebContainer() {
-  const [webcontainer, setWebcontainer] = useState<WebContainer | null>(null); // Initialize as null
+  const [webcontainer, setWebcontainer] = useState<WebContainer | null>(null);
 
   async function main() {
     try {
